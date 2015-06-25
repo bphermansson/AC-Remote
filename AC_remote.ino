@@ -1,4 +1,8 @@
 /*
+ * AC Remote
+ * A code for turning of on and off an AC certain times. 
+ * 
+ * 
 IR receiver connected to Arduino as in https://learn.sparkfun.com/tutorials/ir-communication
 Sketch IRrecvDump gives a code when power button is pressed:
 Could not decode message
@@ -13,6 +17,9 @@ Can be done by modifying the IRrecvdump code (remove the "if ((i % 2) == 1)" and
 )
 The "200" is the number of values and also the size of the array
 
+Set times when to send on and of at line 107 
+"if (hournow >= 10 && hournow <= 12) {" means the AC is on between 10.00AM and 12.59 AM. 
+
 Pseudo code:
 -Check hour of day
 -If time is between 12pm and 8pm
@@ -26,12 +33,13 @@ Hardware:
 -IR diode connected to pin 3 via 100 ohm.
 -For reading code, a IR receiver connected to pin 11.
 -DS1307 based RTC module on A4 and A5. 
+-Indicator led at D4. 
 
 
 */
 
 // Time to wait between runs
-unsigned int LONG_DELAY_MS = 5000;
+unsigned int LONG_DELAY_MS = 60000;
 unsigned long startMillis;
 
 // IR library
@@ -44,7 +52,7 @@ IRsend irsend;
 RTC_DS1307 rtc;
 
 boolean ACon=false;
-int led = 13; 
+int led = 4; 
 
 // just added my own array for the raw signal
 //unsigned int powerOn[148] = {4400,4250,550,1600,600,1550,600,1550,550,1600,550,500,550,550,550,1550,600,500,550,500,600,500,550,500,600,450,600,1550,600,1550,550,500,600,1550,550,550,550,500,600,500,550,500,550,500,600,500,550,1600,550,1550,600,1550,600,1550,600,1550,600,1550,550,1600,550,1550,600,500,550,500,600,500,550,500,550,550,550,500,600,450,600,500,550,500,550,1600,550,1600,550,500,600,500,550,1600,550,500,550,500,550,550,550,500,600,500,550,500,600,450,600,500,550,500,550,550,550,500,600,1550,600,450,600,500,550,500,550,550,550,500,600,450,600,500,550,500,600,1550,550,500,600,500,600,1550,550,500,600,500,550,500,550,500,600};
@@ -75,17 +83,19 @@ void setup()
    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
    Serial.println("Welcome to AC Remote");
+   // Testing hardware by sending on and off code 
+   Serial.println("Testing hardware by sending on and off code");
+   Serial.println("On");
+   digitalWrite(led, HIGH);
+   irsend.sendRaw(powerOn,200,38);
+   delay(5000);
+   Serial.println("Off");
+   digitalWrite(led, LOW);
+   irsend.sendRaw(powerOff,200,38);
+   Serial.println("Done");
 }
 
-void loop() {
-
-     // altered the code just to send/test my raw code
-    /*   irsend.sendRaw(powerOn,200,38);
-       delay(5000);
-       irsend.sendRaw(powerOff,200,38);
-       delay(5000);
-    */   
-       
+void loop() {     
       startMillis = millis();
       while (millis() - startMillis < LONG_DELAY_MS);
       Serial.print("Timeout - ");
@@ -97,7 +107,7 @@ void loop() {
       Serial.print(':');
       Serial.println(now.minute(), DEC);
 
-      if (hournow >= 10 && hournow <= 12) {
+      if (hournow >= 12 && hournow <= 19) {
        // It's daytime
        // Ac on or off?
        if (ACon == false) {
